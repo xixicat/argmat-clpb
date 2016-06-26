@@ -31,11 +31,13 @@ namespace argumatrix{
 using namespace std;
 
 void bitmatrix2plmatrixTerm(const bitmatrix& bm, term_t bmtx);
-void printBoolListTerm(const term_t blst, std::ostream &output = std::cout);
-void printBoolMatrixTerm(const term_t bmtx, std::ostream &output = std::cout);
+void printBitVecTerm(const term_t blst, std::ostream &output = std::cout);
+void printBitMatTerm(const term_t bmtx, std::ostream &output = std::cout);
 void createBlListTerm(const vector<int>& vecI, term_t blst);
 void createBlListTerm(const bitvector& vecB, term_t blst);
 
+
+#define ARG_PROLOG_FILE	"../PlReasoner/argmat-clpb"
 
 /**
 * class: ArgumatrixPlEngine
@@ -93,7 +95,7 @@ public:
 	#if defined(__linux) || defined(__APPLE__)
 		// use putenv() to put an appropriate path into the environment 
 		// before calling PL_initialise().
-		putenv("SWI_HOME_DIR=/usr/lib/swi-prolog");
+		putenv((char*)"SWI_HOME_DIR=/usr/lib/swi-prolog");
 	#elif defined(_WIN32)
 		/* On Windows, it suffices to leave libswipl.dll in the installation
 		 * tree (i.e., do not copy it elsewhere) and add the bin directory
@@ -108,6 +110,9 @@ public:
 
 		if ( !PL_initialise(argc, argv) )
 			throw PlError("ArgumatrixPlEngine failed to initialise");
+
+		// PlEngine initialize successful, then load the argmat-clpb
+		consultPlFile();
 	}
 
 	/**
@@ -123,33 +128,38 @@ public:
 		* @param plArgc: the number of arguments
 		* @param plArgv: a list of arguments
 		* Options:
-		* -x state         Start from state (must be first)
-		* -[LGT]size[KMG]  Specify {Local,Global,Trail} limits
-		* -t toplevel      Toplevel goal
-		* -g goal          Initialisation goal
-		* -f file          User initialisation file
-		* -F file          System initialisation file
-		* -l file          Script source file
-		* -s file          Script source file
-		* -p alias=path    Define file search path 'alias'
-		* [+/-]tty         Allow tty control
-		* -O               Optimised compilation
-		* --nosignals      Do not modify any signal handling
-		* --nodebug        Omit generation of debug info
-		* --quiet          Quiet operation (also -q)
-		* --traditional    Disable extensions of version 7
-		* --home=DIR       Use DIR as SWI-Prolog home
-		* --pldoc[=port]   Start PlDoc server [at port]
-		* --win_app     Behave as Windows application
+		* * -x state         Start from state (must be first)
+		* * -[LGT]size[KMG]  Specify {Local,Global,Trail} limits
+		* * -t toplevel      Toplevel goal
+		* * -g goal          Initialisation goal
+		* * -f file          User initialisation file
+		* * -F file          System initialisation file
+		* * -l file          Script source file
+		* * -s file          Script source file
+		* * -p alias=path    Define file search path 'alias'
+		* * [+/-]tty         Allow tty control
+		* * -O               Optimised compilation
+		* * --nosignals      Do not modify any signal handling
+		* * --nodebug        Omit generation of debug info
+		* * --quiet          Quiet operation (also -q)
+		* * --traditional    Disable extensions of version 7
+		* * --home=DIR       Use DIR as SWI-Prolog home
+		* * --pldoc[=port]   Start PlDoc server [at port]
+		* * --win_app     Behave as Windows application
+		* @note We implement it by a cross-platform and robust solution, which
+		* can handle the ERROR:
+		* **[FATAL ERROR: Could not find system resources]**
+		* when invokes the function _PL_initialise_, or when Prolog is 
+		* embedded in a C/C++/Java/... application.
 		*/
 		int		plArgc = 0;
 		char*	plArgv[10];
 
 
 		plArgv[plArgc++] = program;
-		// plArgv[plArgc++] = "--quiet";  // "-q"
-		plArgv[plArgc++] = "-g";
-		plArgv[plArgc++] = "true";
+		plArgv[plArgc++] = (char*)"-q";  // "--quiet"
+		// plArgv[plArgc++] = "-g";
+		// plArgv[plArgc++] = "true";
 		// plArgv[plArgc++] = "--home=D:/swipl/"; // SWI_HOME_DIR for linux
 		// plArgv[plArgc++] = "-O";
 		plArgv[plArgc] = NULL;
@@ -163,11 +173,50 @@ public:
 		new (this)ArgumatrixPlEngine(plArgc, plArgv);
 	}
 
+
+	/**
+	 * Method:    consultPlFile
+	 * @brief   Loading the Prolog source file [argmat-clpb]   
+	 * @param     std::string plFile
+	 * @note SWI-Prolog supports compilation of individual or multiple Prolog
+	 * source files into ¡®Quick Load Files¡¯. A ¡®Quick Load File¡¯ (.qlf file)
+	 * stores the contents of the file in a precompiled format. These files
+	 * load considerably faster than source files and are normally more compact.
+	 * They are machine-independent and may thus be loaded on any implementation
+	 * of SWI-Prolog. Note, however, that clauses are stored as virtual 
+	 * machine instructions. Changes to the compiler will generally make old
+	 * compiled files unusable. Quick Load Files are created using qcompile/1. 
+	 * They are loaded using consult/1 or one of the other file-loading 
+	 * predicates described in section 4.3. If consult/1 is given an 
+	 * explicit .pl file, it will load the Prolog source. When given a .qlf
+	 * file, it will load the file. When no extension is specified, it will
+	 * load the .qlf file when present and the .pl file otherwise.
+	 */
+	void consultPlFile(std::string plFile = ARG_PROLOG_FILE);
+
+
 	~ArgumatrixPlEngine()
 	{ 
 		PL_cleanup(0);
 	}
 }; // END class ArgumatrixPlEngine
+
+void ArgumatrixPlEngine::consultPlFile(std::string plFile /*= ARG_PROLOG_FILE*/)
+{
+	try {
+		// PlCall("database", "consult", PlTermv(PlTerm(plFile.c_str())));
+		predicate_t p_consult = PL_predicate("consult", 1, "database");
+		term_t t = PL_new_term_ref();
+		if ( !PL_put_string_chars(t, plFile.c_str()) )
+			throw PlResourceError();
+		if ( !PL_call_predicate(NULL, 0, p_consult, t) )
+			throw PlResourceError();
+	}
+	catch (PlException* e) {
+		cerr << "ArgumatrixPlEngine::consultPlFile loading argmat-clpb.pl failed!" 
+			 << endl << (char*)e << endl;
+	}
+}
 
 
 /*!
@@ -220,21 +269,21 @@ public:
 		PL_unregister_atom(mdl_atom);
 		PL_unregister_atom(time_atom);
 
-		//PL_Q_NORMAL
-		//Normal operation. The debugger inherits its settings from the environment. If an excep-
-		//tion occurs that is not handled in Prolog, a message is printed and the tracer is started to
-		//debug the error.4
-		//PL_Q_NODEBUG
-		//Switch off the debugger while executing the goal. This option is used by many calls
-		//to hook-predicates to avoid tracing the hooks.
-		//An example is print/1 calling
-		//portray/1 from foreign code.
-		//PL_Q_CATCH EXCEPTION
-		//If an exception is raised while executing the goal, do not report it, but make it available
-		//for PL exception().
-		//PL_Q_PASS EXCEPTION
-		//As PL_Q_CATCH EXCEPTION, but do not invalidate the exception-term while calling
-		//PL_close_query(). This option is experimental.
+		// PL_Q_NORMAL
+		// Normal operation. The debugger inherits its settings from the environment. If an excep-
+		// tion occurs that is not handled in Prolog, a message is printed and the tracer is started to
+		// debug the error.4
+		// PL_Q_NODEBUG
+		// Switch off the debugger while executing the goal. This option is used by many calls
+		// to hook-predicates to avoid tracing the hooks.
+		// An example is print/1 calling
+		// portray/1 from foreign code.
+		// PL_Q_CATCH EXCEPTION
+		// If an exception is raised while executing the goal, do not report it, but make it available
+		// for PL exception().
+		// PL_Q_PASS EXCEPTION
+		// As PL_Q_CATCH EXCEPTION, but do not invalidate the exception-term while calling
+		// PL_close_query(). This option is experimental.
 		qid = PL_open_query(mdl, PL_Q_CATCH_EXCEPTION, p, cp_term.a0);
 		if ( !qid )
 			throw PlResourceError();
@@ -286,19 +335,23 @@ void bitmatrix2plmatrixTerm(const bitmatrix& bm, term_t bmtx)
 		createBlListTerm(bm[i], blst);
 		PL_put_term(h, blst);
 
-		PL_cons_list(bmtx, h, bmtx); //add h in front of the bmtx
+		if( !PL_cons_list(bmtx, h, bmtx) ) //add h in front of the bmtx
+		{
+			// if adding failed, throw error
+			throw PlResourceError(bmtx);
+		}
 	}
 }
 
 /**
- * Method:    printBoolListTerm
- * FullName:  public argumatrix::printBoolListTerm
+ * Method:    printBitVecTerm
+ * FullName:  public argumatrix::printBitVecTerm
  * @brief     Output a Prolog Boolean list term. 
  * @param     const term_t blst
  * @param     std::ostream & output
  * @return    void
  */
-void printBoolListTerm(const term_t blst, std::ostream &output /*= std::cout*/)
+void printBitVecTerm(const term_t blst, std::ostream &output /*= std::cout*/)
 {
 	//the list ref will get modified so copy it
 	term_t tail = PL_copy_term_ref(blst);
@@ -312,14 +365,13 @@ void printBoolListTerm(const term_t blst, std::ostream &output /*= std::cout*/)
 		}else{
 			output << DELIMITER; // ","
 		}
-		if ( PL_is_integer(head) ) {
-			PL_get_integer(head, &x);
+
+		if ( PL_get_integer(head, &x) ) {
 			output << x;
-		}
-		else { // Not a Number
-			output << "NaN";
-		}
-		
+		} else { // Not a Number
+			// output << "NaN";
+			throw PlTypeError("atom", head);
+		}		
 	}
 	output << RIGHT_LIMITER;
 }
@@ -331,7 +383,7 @@ void printBoolListTerm(const term_t blst, std::ostream &output /*= std::cout*/)
 * @param term_t blst
 * @return no return. 
 */
-void printBoolMatrixTerm(const term_t bmtx, std::ostream &output /*= std::cout*/)
+void printBitMatTerm(const term_t bmtx, std::ostream &output /*= std::cout*/)
 {
 	//the list ref will get modified so copy it
 	term_t tail = PL_copy_term_ref(bmtx);
@@ -344,7 +396,7 @@ void printBoolMatrixTerm(const term_t bmtx, std::ostream &output /*= std::cout*/
 		//}else{
 		//	output << DELIMITER; // ","
 		//}
-		printBoolListTerm(head, output);
+		printBitVecTerm(head, output);
 		output << endl;
 	}
 	//output << RIGHT_LIMITER << endl;
@@ -366,11 +418,17 @@ void createBlListTerm(const vector<int>& vecI, term_t blst)
 		if (2 == vecI[i]) {  // unknown
 			PL_put_variable(tmp);
 		} else {  /* 0 and 1 */
-			PL_put_integer(tmp, vecI[i]);
+			if( !PL_put_integer(tmp, vecI[i]) ){
+				// putting failed
+				throw PlTypeError("atom", tmp);
+			}
 			// PL_put_bool(tmp, vecI[i]);
 		}
 		
-		PL_cons_list(blst, tmp, blst); //add tmp in front of the list
+		if( !PL_cons_list(blst, tmp, blst) ) //add tmp in front of the list
+		{
+			throw PlTypeError("list", blst);
+		}
 	}
 }
 
@@ -392,8 +450,16 @@ void createBlListTerm(const bitvector& bv, term_t blst)
 		//} else {  /* 0 and 1 */
 		//	PL_put_integer(tmp, 0);
 		//}
-		PL_put_integer(tmp, bv[i]);
-		PL_cons_list(blst, tmp, blst); //add tmp in front of the list
+		
+		if( !PL_put_integer(tmp, bv[i]) ){
+			// putting failed
+			throw PlTypeError("atom", tmp);
+		}
+
+		if( !PL_cons_list(blst, tmp, blst) ) //add tmp in front of the list
+		{
+			throw PlTypeError("list", blst);
+		}
 	}
 }
 

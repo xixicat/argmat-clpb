@@ -190,12 +190,20 @@ admissible5(AttM, X) :-
 	maplist(sat, S).  % the constraint
     
 % The constraint model [AD6] of admissible.		
+%admissible6(AttM, X) :-
+%	neutrality(AttM, X, Y),  % \neg R^+(X)
+%	maplist(badd, X, Y, T), % \neg R^+(X) or Defense(X)
+%    mv_mult(AttM, T, Z),  % R^+(T)
+%    maplist(bmult, X, Z, S), % S = X*T
+%    sat(+S=:=0).  % the constraint
+
 admissible6(AttM, X) :-
-	neutrality(AttM, X, Y),  % \neg R^+(X)
-	maplist(badd, X, Y, T), % \neg R^+(X) or Defense(X)
-    mv_mult(AttM, T, Z),  % R^+(T)
-    maplist(bmult, X, Z, S), % S = X*T
-    sat(+S=:=0).  % the constraint
+	mv_mult(AttM, X, Y), 
+	transpose(AttM, AttM_t),
+	mv_mult(AttM_t, X, Z),      % Z = A^T*x
+	maplist(neg, X, NX),
+    maplist(c_leq, Y, NX),
+    maplist(c_leq, Z, Y).  
     
 % =======================================================	
 % The constraint model [CO1] for complete semantics.	

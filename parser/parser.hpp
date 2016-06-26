@@ -236,7 +236,7 @@ bool parser::Aspartix2DungAF(const std::string& fileName, DungAF& daf)
 bool parser::TrivialGraph2DungAF(const std::string& fileName, DungAF& daf)
 {
 	bool _is_successful=true;
-	string arg1,arg2;
+	string arg1, arg2;
 
 	// Before parsing, we need to clear the daf.
 	daf.clear();
@@ -252,23 +252,18 @@ bool parser::TrivialGraph2DungAF(const std::string& fileName, DungAF& daf)
 	}
 
 	// read arguments
-	while(_infile>>arg1)
-	{	
-		if(arg1=="#")
-		{
+	while(_infile >> arg1) {	
+		if(arg1=="#") {
 			break;
-		}
-		else
-		{
+		} else {
 			daf.addArgument(arg1);
 			// cout << arg1 << endl;
 		}
 	}
 
 	// read attackes
-	while(_infile>>arg1>>arg2)
-	{  
-		daf.addAttack(arg1,arg2);	
+	while(_infile >> arg1 >> arg2) {  
+		daf.addAttack(arg1, arg2);	
 		// cout << arg1 << " -> " << arg2 << endl;
 	}
 

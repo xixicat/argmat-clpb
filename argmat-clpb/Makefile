@@ -2,7 +2,7 @@
 
 # swipl-ld -o clpb.out argmat-clpb-main.cpp ../PlReasoner/argmat-clpb.pl -I../ -cc-options,-std=gnu++11 -lboost_regex
 
-TARGET = argmat-clpb.a
+TARGET = argmat-clpb.out
 OBJ_PATH = objs
 PREFIX_BIN =
 

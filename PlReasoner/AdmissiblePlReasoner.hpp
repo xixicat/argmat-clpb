@@ -149,9 +149,12 @@ AdmissiblePlReasoner::AdmissiblePlReasoner(
 	} else
 	if (sm_task == "AD5") {
 		m_predicate = "admissible5";
+	} else
+	if (sm_task == "AD6") {
+		m_predicate = "admissible6";
 	} else {
 		cerr << "Error: in AdmissiblePlReasoner, unsupported predicate!" << endl;
-		cerr << "  The supported options [AD,AD1,AD2,AD3,AD4,AD5]" << endl;
+		cerr << "  The supported options [AD,AD1,AD2,AD3,AD4,AD5,AD6]" << endl;
 		exit(1);
 	}
 }

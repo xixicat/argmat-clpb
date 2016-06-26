@@ -31,7 +31,6 @@
 
 
 // #define ARG_PROLOG_FILE	"./argmat-clpb.pl"
-#define ARG_PROLOG_FILE	"../PlReasoner/argmat-clpb"
 
 namespace argumatrix{
 
@@ -56,27 +55,6 @@ class PlReasoner : public Reasoner {
 public:
 	PlReasoner(const DungAF& daf, streambuf* osbuff = std::cout.rdbuf());
 	~PlReasoner();
-
-
-	/**
-	 * Method:    consultPlFile
-	 * @brief   Loading the Prolog source file [argmat-clpb]   
-	 * @param     std::string plFile
-	 * @note SWI-Prolog supports compilation of individual or multiple Prolog
-	 * source files into ‘Quick Load Files’. A ‘Quick Load File’ (.qlf file)
-	 * stores the contents of the file in a precompiled format. These files
-	 * load considerably faster than source files and are normally more compact.
-	 * They are machine-independent and may thus be loaded on any implementation
-	 * of SWI-Prolog. Note, however, that clauses are stored as virtual 
-	 * machine instructions. Changes to the compiler will generally make old
-	 * compiled files unusable. Quick Load Files are created using qcompile/1. 
-	 * They are loaded using consult/1 or one of the other file-loading 
-	 * predicates described in section 4.3. If consult/1 is given an 
-	 * explicit .pl file, it will load the Prolog source. When given a .qlf
-	 * file, it will load the file. When no extension is specified, it will
-	 * load the .qlf file when present and the .pl file otherwise.
-	 */
-	void consultPlFile(std::string plFile = ARG_PROLOG_FILE);
 
 	void Test_time();
 
@@ -232,9 +210,6 @@ protected:
 PlReasoner::PlReasoner(const DungAF& daf, streambuf* osbuff/* = std::cout.rdbuf()*/):
 	Reasoner(daf, osbuff)
 {
-	// Load the logical engine
-	consultPlFile();
-
 	// Initialization
 	createPlAttackMatrix();
 }
@@ -247,24 +222,6 @@ void PlReasoner::createPlAttackMatrix()
 	} catch ( PlException &ex ) { 
 		cerr << (char *) ex << endl;
 		exit(1);
-	}
-}
-
-void PlReasoner::consultPlFile(std::string plFile /*= ARG_PROLOG_FILE*/)
-{
-	try {
-		// PlCall("database", "consult", PlTermv(PlTerm(plFile.c_str())));
-		predicate_t p_consult = PL_predicate("consult", 1, "database");
-		term_t t = PL_new_term_ref();
-		if ( !PL_put_string_chars(t, plFile.c_str()) )
-			throw PlResourceError();
-		if ( !PL_call_predicate(NULL, 0, p_consult, t) )
-			throw PlResourceError();
-	}
-	catch (PlException* e)
-	{
-		cerr << "PlReasoner::consultPlFile loading argmat-clpb.pl failed!" 
-			 << "   " << (char*)e << endl;
 	}
 }
 
@@ -284,7 +241,10 @@ void PlReasoner::printLableExtByBlistTerm(const PlTerm& plt)
 	bool first = true;
 	m_output << LEFT_LIMITER;
 	while(PL_get_list(tail, head, tail)){
-		PL_get_integer(head, &x);
+		if( !PL_get_integer(head, &x) ) {
+			throw PlTypeError("integer", head);
+		}
+
 		if(x == 1) 
 		{
 			if(first){
@@ -314,16 +274,19 @@ void PlReasoner::addBlTermToBvExts(const PlTerm& plt)
 	int x, index = 0;
 	bitvector _bv(m_argNum, 0);  // all bits are 0s.
 	while(PL_get_list(tail, head, tail)) {
-		PL_get_integer(head, &x);
-		if(x == 1) {
-			_bv.set(index);
+		if(PL_get_integer(head, &x)) {
+			if(x == 1) {
+				_bv.set(index);
+			}
+		} else {
+			throw PlTypeError("atom", head);
 		}
 
 		++index;
 	}
 
 	// The length of the list must be equal to the number of arguments.
-	assert(m_argNum == index);
+	// assert(m_argNum == index);
 
 	m_extensions.insert( _bv );
 }
