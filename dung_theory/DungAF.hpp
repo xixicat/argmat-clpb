@@ -67,13 +67,13 @@ using namespace boost;
 * Here, we use the boost graph to define the argument graph. 
 *   typedef adjacency_list
 *   < setS, // edge container
-*   listS, // vertex container
+*   vecS, // vertex container
 *   undirectedS,
 *   boost::no_property,  // vertex property
 *   boost::no_property // edge property
 *   > graph;
 */
-typedef boost::adjacency_list<boost::setS, boost::vecS,
+typedef boost::adjacency_list<boost::listS, boost::vecS,
 	boost::directedS, ArgumentProperty, AttackProperty> ArgumentGraph;
 
 // The definition of the argument (descriptor)

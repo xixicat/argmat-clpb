@@ -34,7 +34,7 @@ using namespace std;
 class Reasoner {
 public:
 	Reasoner(const DungAF& daf, streambuf* osbuff = std::cout.rdbuf());
-
+	virtual ~Reasoner() {}
 	/**
 	 * @brief Get the attacked arguments by arguments in _bv, \f$R^+(S)\f$ 
 	 * \f$R^+(S) = {x|x is attacked by S}\f$.
@@ -563,12 +563,22 @@ bool Reasoner::is_admissible(const bitvector& _bv)
 __inline
 bool Reasoner::is_complete(const bitvector& _bv)
 {
-	// $S$ is a complete extension iff $S == F(S) \cap N(S)$.
-	bitvector neu_s = neutrality(_bv);
-	bitvector f_s = neutrality( neu_s );
-	f_s &= neu_s;
+	// // $S$ is a complete extension iff $S$ is conflict-free and $S == F(S)$.
+	// if ( !is_conflict_free(_bv) )
+	//	  return false;	
+	// bitvector neu_s = neutrality(_bv);
+	// bitvector f_s = neutrality( neu_s );
+	// return _bv == f_s;
+	
+	// This way may be more efficient.
+	return is_conflict_free(_bv) && (_bv == characteristic(_bv));
 
-	return _bv == f_s;
+	//// $S$ is a complete extension iff $S == F(S) \cap N(S)$.
+	//bitvector neu_s = neutrality(_bv);
+	//bitvector f_s = neutrality( neu_s );
+	//f_s &= neu_s;
+
+	//return _bv == f_s;
 }
 
 __inline

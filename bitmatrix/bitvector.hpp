@@ -16,14 +16,13 @@
 
 namespace boost {
 	/**
-	 * The multiplication of two dynamic_bitsets. 
+	 * @brief The multiplication of two dynamic_bitsets. 
 	 * Assume A=[a_1, a_2, ..., a_n] and B=[b_1, b_2, ..., b_n], the multiplication
 	 * of A*B = (a_1*b_1)+(a_2*b_2)+...+(a_n*b_n). This operation is equivalent 
 	 * in function to determine whether A intersects with B.
 	 * @param two dynamic_bitsets a and b
 	 * @return the bool value of A*B.
 	 */
-	
 	template <typename Block, typename Allocator>
 	inline bool operator*(const dynamic_bitset<Block, Allocator>& a,
 		const dynamic_bitset<Block, Allocator>& b)
@@ -68,7 +67,7 @@ public:
 	
 public:
 	/**
-	 * The multiplication of two bitvector. 
+	 * @brief The multiplication of two bitvector. 
 	 * Assume A=[a_1, a_2, ..., a_n] and B=[b_1, b_2, ..., b_n], the multiplication
 	 * of A*B = (a_1*b_1)+(a_2*b_2)+...+(a_n*b_n). This operation is equivalent 
 	 * in function to determine whether A intersects with B.
@@ -146,8 +145,11 @@ bool bitvector::Increase()
 __inline 
 bool bitvector::is_universal()
 {
-	return all();
-	// return bitvector(this->size(), 0).set() == *this;
+	// dynamic_bitset<>::all() may not be supported in the version
+	// less than 1.61. For compatibility, an inefficient way is used.
+
+	//return all();
+	return bitvector(this->size(), 0).set() == *this;
 }
 
 } // namespace argumatrix
